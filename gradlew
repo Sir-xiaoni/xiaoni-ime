@@ -27,9 +27,6 @@ cd "$SAVED" >/dev/null
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
 
-# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS=""
-
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD="maximum"
 
@@ -69,7 +66,6 @@ CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
     if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-        # IBM's JDK on AIX uses strange locations for the executables
         JAVACMD="$JAVA_HOME/jre/sh/java"
     else
         JAVACMD="$JAVA_HOME/bin/java"
@@ -154,15 +150,5 @@ if [ "$cygwin" = "true" -o "$msys" = "true" ] ; then
     esac
 fi
 
-# Escape application args
-save () {
-    for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
-    echo " "
-}
-APP_ARGS=`save "$@"`
-
 # Collect all arguments for the java command
-set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "\"-Dorg.gradle.appname=$APP_BASE_NAME\"" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$APP_ARGS"
-
-# Use "exec" to replace the current process
-exec "$JAVACMD" "$@"
+exec "$JAVACMD" $JAVA_OPTS $GRADLE_OPTS -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
