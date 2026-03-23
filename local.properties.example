@@ -1,0 +1,6 @@
+# 本地属性配置
+# 这个文件不应该被提交到版本控制
+
+# 讯飞语音 SDK AppID
+# 从 https://www.xfyun.cn/ 获取
+IFLYTEK_APPKEY=YOUR_APPID_HERE

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 键盘主题色 -->
+    <color name="keyboard_background">#FF2D2D2D</color>
+    <color name="key_background_normal">#FF4A4A4A</color>
+    <color name="key_background_pressed">#FF666666</color>
+    <color name="key_text_color">#FFFFFFFF</color>
+    
+    <!-- 语音面板 -->
+    <color name="voice_panel_background">#FF1A1A1A</color>
+    <color name="voice_text_color">#FFFFFFFF</color>
+    <color name="voice_hint_color">#FFAAAAAA</color>
+    <color name="voice_button_background">#FF4CAF50</color>
+    <color name="voice_volume_color">#FF4CAF50</color>
+    
+    <!-- 主题色 -->
+    <color name="primary">#FF4CAF50</color>
+    <color name="primary_dark">#FF388E3C</color>
+    <color name="accent">#FF8BC34A</color>
+</resources>

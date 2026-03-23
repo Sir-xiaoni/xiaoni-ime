@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">小逆输入法</string>
+    <string name="settings_title">小逆输入法设置</string>
+    <string name="subtype_label">中文</string>
+    
+    <!-- 语音输入 -->
+    <string name="voice_listening">正在聆听...</string>
+    <string name="voice_processing">正在识别...</string>
+    <string name="voice_error">识别失败，请重试</string>
+    <string name="voice_tap_to_start">点击麦克风开始说话</string>
+    <string name="voice_continuous">继续聆听...</string>
+</resources>

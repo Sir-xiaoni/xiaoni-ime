@@ -1,0 +1,83 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Create local.properties
+      run: |
+        echo "IFLYTEK_APPKEY=${{ secrets.IFLYTEK_APPKEY }}" > local.properties
+    
+    - name: Download iFlytek SDK
+      run: |
+        mkdir -p app/libs
+        # 由于讯飞 SDK 需要登录下载，这里创建一个占位
+        # 实际使用时需要将 Msc.jar 上传到仓库或使用其他方式
+        echo "请手动将 Msc.jar 放入 app/libs/ 目录"
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+    
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: xiaoni-ime-debug
+        path: app/build/outputs/apk/debug/*.apk
+    
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+      env:
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+    
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: xiaoni-ime-release
+        path: app/build/outputs/apk/release/*.apk
+    
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: app/build/outputs/apk/release/*.apk
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
