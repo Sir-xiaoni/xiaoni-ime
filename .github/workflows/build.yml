@@ -10,36 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
+    - uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
     
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+    - uses: android-actions/setup-android@v3
     
-    - name: Create local.properties
-      run: echo "sdk.dir=/usr/local/lib/android-sdk" > local.properties
+    - run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug
     
-    - name: Download Gradle
-      run: |
-        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
-        unzip -q gradle-8.5-bin.zip
-        export PATH=$PWD/gradle-8.5/bin:$PATH
-    
-    - name: Build with Gradle
-      run: |
-        export PATH=$PWD/gradle-8.5/bin:$PATH
-        gradle wrapper --gradle-version 8.5
-        ./gradlew assembleDebug --info
-    
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
-        name: xiaoni-ime-debug
+        name: apk
         path: app/build/outputs/apk/debug/*.apk
-      if: always()
