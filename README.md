@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 小逆输入法
 
 一个专注于极速语音输入的 Android 输入法。
@@ -91,3 +92,7 @@ xiaoni-ime/
 ## 许可证
 
 MIT
+=======
+# xiaoni-ime
+j
+>>>>>>> 28b52cb7f3294f630dad6c25c1e6f248d88ba16d
