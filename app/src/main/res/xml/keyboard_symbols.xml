@@ -32,24 +32,24 @@
     </Row>
 
     <Row>
-        <Key android:codes="-1" android:keyLabel="更多" android:keyWidth="15%p" android:keyEdgeFlags="left" />
+        <Key android:codes="-1" android:keyLabel="123" android:keyWidth="15%p" android:keyEdgeFlags="left" />
         <Key android:codes="33" android:keyLabel="!" />
-        <Key android:codes="34" android:keyLabel="\"" />
+        <Key android:codes="34" android:keyLabel="&#34;" />
         <Key android:codes="39" android:keyLabel="'" />
         <Key android:codes="58" android:keyLabel=":" />
         <Key android:codes="59" android:keyLabel=";" />
         <Key android:codes="47" android:keyLabel="/" />
         <Key android:codes="63" android:keyLabel="?" />
-        <Key android:codes="-5" android:keyLabel="⌫" android:keyWidth="15%p" android:isRepeatable="true" android:keyEdgeFlags="right" />
+        <Key android:codes="-5" android:keyLabel="Del" android:keyWidth="15%p" android:isRepeatable="true" android:keyEdgeFlags="right" />
     </Row>
 
     <Row android:rowEdgeFlags="bottom">
         <Key android:codes="-101" android:keyLabel="ABC" android:keyWidth="12%p" android:keyEdgeFlags="left" />
         <Key android:codes="44" android:keyLabel="," android:keyWidth="10%p" />
-        <Key android:codes="32" android:keyLabel="空格" android:keyWidth="36%p" android:isRepeatable="true" />
+        <Key android:codes="32" android:keyLabel="Space" android:keyWidth="36%p" android:isRepeatable="true" />
         <Key android:codes="46" android:keyLabel="." android:keyWidth="10%p" />
-        <Key android:codes="-100" android:keyLabel="🎤" android:keyWidth="12%p" />
-        <Key android:codes="-4" android:keyLabel="完成" android:keyWidth="20%p" android:keyEdgeFlags="right" />
+        <Key android:codes="-100" android:keyLabel="Mic" android:keyWidth="12%p" />
+        <Key android:codes="-4" android:keyLabel="Done" android:keyWidth="20%p" android:keyEdgeFlags="right" />
     </Row>
 
 </Keyboard>
