@@ -1,13 +1,16 @@
 package com.xiaoni.ime.voice
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.util.Log
-import com.iflytek.cloud.*
 import com.xiaoni.ime.utils.PreferenceManager
 
 /**
- * 语音输入管理器 - 集成讯飞语音识别
+ * 语音输入管理器 - 使用 Android 原生语音识别
  */
 class VoiceInputManager(
     private val context: Context,
@@ -32,12 +35,12 @@ class VoiceInputManager(
     }
     
     private fun initSpeechRecognizer() {
-        speechRecognizer = SpeechRecognizer.createRecognizer(context) { code ->
-            if (code != ErrorCode.SUCCESS) {
-                Log.e(TAG, "语音识别器初始化失败: $code")
-            } else {
-                Log.d(TAG, "语音识别器初始化成功")
-            }
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+            Log.d(TAG, "语音识别器初始化成功")
+        } else {
+            Log.e(TAG, "设备不支持语音识别")
+            callback.onVoiceError("设备不支持语音识别")
         }
     }
     
@@ -50,66 +53,91 @@ class VoiceInputManager(
             return
         }
         
-        speechRecognizer?.let { recognizer ->
-            // 设置识别参数
-            val params = getRecognizerParams()
-            recognizer.setParameter(SpeechConstant.PARAMS, null)
-            
-            // 应用参数
-            params.forEach { (key, value) ->
-                recognizer.setParameter(key, value)
-            }
-            
-            // 开始监听
-            val ret = recognizer.startListening(object : RecognizerListener {
-                override fun onBeginOfSpeech() {
-                    Log.d(TAG, "开始说话")
-                    isListening = true
-                    callback.onVoiceStart()
-                }
-                
-                override fun onEndOfSpeech() {
-                    Log.d(TAG, "结束说话")
-                    isListening = false
-                }
-                
-                override fun onResult(results: RecognizerResult?, isLast: Boolean) {
-                    results?.let {
-                        val text = parseResult(it.resultString)
-                        if (text.isNotEmpty() && isLast) {
-                            callback.onVoiceResult(text)
-                        }
-                    }
-                }
-                
-                override fun onError(error: SpeechError?) {
-                    isListening = false
-                    error?.let {
-                        Log.e(TAG, "识别错误: ${it.errorCode} - ${it.errorDescription}")
-                        // 忽略用户主动取消的错误
-                        if (it.errorCode != ErrorCode.ERROR_EXIT) {
-                            callback.onVoiceError(it.errorDescription)
-                        }
-                    }
-                }
-                
-                override fun onEvent(eventType: Int, arg1: Int, arg2: Int, obj: Bundle?) {
-                    // 处理特殊事件
-                }
-                
-                override fun onVolumeChanged(volume: Int, data: ByteArray?) {
-                    callback.onVoiceVolumeChanged(volume)
-                }
-            })
-            
-            if (ret != ErrorCode.SUCCESS) {
-                Log.e(TAG, "开始监听失败: $ret")
-                callback.onVoiceError("启动识别失败")
-            }
-        } ?: run {
-            Log.e(TAG, "语音识别器未初始化")
+        if (speechRecognizer == null) {
             callback.onVoiceError("语音识别器未初始化")
+            return
         }
+        
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            // 识别模式: 自由形式
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // 语言: 中文
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+            // 提示文本
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "请说话...")
+            // 最大结果数
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            // 部分结果
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+        
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                Log.d(TAG, "准备就绪，可以说话")
+                isListening = true
+                callback.onVoiceStart()
+            }
+            
+            override fun onBeginningOfSpeech() {
+                Log.d(TAG, "开始说话")
+            }
+            
+            override fun onRmsChanged(rmsdB: Float) {
+                // 音量变化 0-10 转为 0-100
+                val volume = ((rmsdB + 2.5) * 8).toInt().coerceIn(0, 100)
+                callback.onVoiceVolumeChanged(volume)
+            }
+            
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            
+            override fun onEndOfSpeech() {
+                Log.d(TAG, "结束说话")
+                isListening = false
+            }
+            
+            override fun onError(error: Int) {
+                isListening = false
+                val errorMsg = when (error) {
+                    SpeechRecognizer.ERROR_AUDIO -> "音频错误"
+                    SpeechRecognizer.ERROR_CLIENT -> "客户端错误"
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "权限不足"
+                    SpeechRecognizer.ERROR_NETWORK -> "网络错误"
+                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "网络超时"
+                    SpeechRecognizer.ERROR_NO_MATCH -> "未能识别，请重试"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "识别器忙"
+                    SpeechRecognizer.ERROR_SERVER -> "服务器错误"
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "说话超时"
+                    else -> "未知错误: $error"
+                }
+                Log.e(TAG, "识别错误: $errorMsg")
+                callback.onVoiceError(errorMsg)
+            }
+            
+            override fun onResults(results: Bundle?) {
+                isListening = false
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    val text = matches[0]
+                    Log.d(TAG, "识别结果: $text")
+                    callback.onVoiceResult(text)
+                } else {
+                    callback.onVoiceError("未能识别")
+                }
+            }
+            
+            override fun onPartialResults(partialResults: Bundle?) {
+                // 部分结果，可选处理
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                matches?.firstOrNull()?.let {
+                    Log.d(TAG, "部分结果: $it")
+                }
+            }
+            
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        
+        speechRecognizer?.startListening(intent)
+        Log.d(TAG, "开始监听")
     }
     
     /**
@@ -131,52 +159,5 @@ class VoiceInputManager(
         speechRecognizer?.destroy()
         speechRecognizer = null
         Log.d(TAG, "语音识别器已销毁")
-    }
-    
-    /**
-     * 获取识别参数
-     */
-    private fun getRecognizerParams(): Map<String, String> {
-        return mutableMapOf<String, String>().apply {
-            // 应用领域: 日常用语
-            put(SpeechConstant.DOMAIN, "iat")
-            // 语言: 中文
-            put(SpeechConstant.LANGUAGE, "zh_cn")
-            // 方言: 普通话
-            put(SpeechConstant.ACCENT, "mandarin")
-            // 采样率
-            put(SpeechConstant.SAMPLE_RATE, "16000")
-            // 返回结果格式: JSON
-            put(SpeechConstant.RESULT_TYPE, "json")
-            // 标点符号: 有标点
-            put(SpeechConstant.ASR_PTT, "1")
-            // 音频编码
-            put(SpeechConstant.AUDIO_FORMAT, "wav")
-            // 静音检测时间(毫秒)
-            put(SpeechConstant.VAD_BOS, "4000")
-            put(SpeechConstant.VAD_EOS, "1000")
-            // 网络超时
-            put(SpeechConstant.NET_TIMEOUT, "20000")
-            // 是否开启语义理解
-            put(SpeechConstant.NLP_VERSION, "3.0")
-        }
-    }
-    
-    /**
-     * 解析识别结果
-     */
-    private fun parseResult(json: String): String {
-        // 讯飞返回的 JSON 格式解析
-        val sb = StringBuilder()
-        try {
-            // 简单解析，实际项目中建议使用 Gson
-            val regex = """"w":"([^"]+)"""".toRegex()
-            regex.findAll(json).forEach { match ->
-                sb.append(match.groupValues[1])
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "解析结果失败", e)
-        }
-        return sb.toString()
     }
 }

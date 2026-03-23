@@ -49,6 +49,5 @@ dependencies {
     implementation libs.androidx.lifecycle.runtime
     implementation libs.kotlinx.coroutines
     
-    // 讯飞语音 SDK (本地依赖)
-    implementation files('libs/Msc.jar')
+    // 无需第三方 SDK，使用 Android 原生语音识别
 }

@@ -12,57 +12,26 @@
 ### 2. 上传代码到 GitHub
 
 ```bash
-# 进入项目目录
+# 1. 进入项目目录
 cd xiaoni-ime
 
-# 初始化 git
+# 2. 初始化 git
 git init
 
-# 添加所有文件
+# 3. 添加所有文件
 git add .
 
-# 提交
+# 4. 提交
 git commit -m "Initial commit: 小逆输入法"
 
-# 关联远程仓库（替换 YOUR_USERNAME 为你的 GitHub 用户名）
+# 5. 关联远程仓库（替换 YOUR_USERNAME 为你的 GitHub 用户名）
 git remote add origin https://github.com/YOUR_USERNAME/xiaoni-ime.git
 
-# 推送代码
+# 6. 推送代码
 git push -u origin main
 ```
 
-### 3. 配置讯飞 AppID
-
-1. 在 GitHub 仓库页面，点击 "Settings"
-2. 左侧菜单选择 "Secrets and variables" → "Actions"
-3. 点击 "New repository secret"
-4. 添加以下 Secrets：
-
-| Name | Value |
-|------|-------|
-| `IFLYTEK_APPKEY` | 你的讯飞 AppID |
-
-### 4. 上传讯飞 SDK
-
-由于讯飞 SDK 需要登录下载，你需要手动上传：
-
-**方式 A：直接上传到仓库**
-```bash
-# 将 Msc.jar 放入 app/libs/
-cp /path/to/Msc.jar app/libs/
-
-# 提交并推送
-git add app/libs/Msc.jar
-git commit -m "Add iFlytek SDK"
-git push
-```
-
-**方式 B：使用 GitHub Releases 存储（推荐）**
-1. 在本地创建一个包含 Msc.jar 的压缩包
-2. 上传到 GitHub Releases
-3. 修改 workflow 文件从 Release 下载
-
-### 5. 触发构建
+### 3. 触发构建
 
 推送代码后，GitHub Actions 会自动开始构建：
 
@@ -70,7 +39,7 @@ git push
 2. 查看构建进度
 3. 构建完成后，在 "Artifacts" 中下载 APK
 
-### 6. 下载 APK
+### 4. 下载 APK
 
 构建完成后，你可以：
 
@@ -120,17 +89,14 @@ cat xiaoni-ime.keystore | base64
 
 ## 常见问题
 
-### Q: 构建失败，提示找不到 Msc.jar？
-A: 确保已将讯飞 SDK 的 Msc.jar 上传到 `app/libs/` 目录并提交。
-
-### Q: 如何更新 AppID？
-A: 在仓库 Settings → Secrets 中更新 `IFLYTEK_APPKEY`。
-
-### Q: 构建时间多长？
-A: 首次构建约 5-10 分钟（需要下载依赖），后续约 2-3 分钟。
+### Q: 构建失败？
+A: 检查 Actions 日志，通常是 Gradle 或 SDK 问题。
 
 ### Q: 如何手动触发构建？
 A: 进入 Actions 页面，选择 workflow，点击 "Run workflow"。
+
+### Q: 语音识别需要联网吗？
+A: Android 原生语音识别通常需要联网，但部分设备支持离线识别。
 
 ---
 

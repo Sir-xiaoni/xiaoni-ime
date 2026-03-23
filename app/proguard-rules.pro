@@ -2,6 +2,5 @@
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 
-# 讯飞语音 SDK
--keep class com.iflytek.**{*;}
--keepattributes Signature
+# 保留语音识别相关类
+-keep class android.speech.** { *; }

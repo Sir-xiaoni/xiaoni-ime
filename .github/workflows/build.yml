@@ -34,17 +34,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     
-    - name: Create local.properties
-      run: |
-        echo "IFLYTEK_APPKEY=${{ secrets.IFLYTEK_APPKEY }}" > local.properties
-    
-    - name: Download iFlytek SDK
-      run: |
-        mkdir -p app/libs
-        # 由于讯飞 SDK 需要登录下载，这里创建一个占位
-        # 实际使用时需要将 Msc.jar 上传到仓库或使用其他方式
-        echo "请手动将 Msc.jar 放入 app/libs/ 目录"
-    
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     
@@ -59,10 +48,6 @@ jobs:
     
     - name: Build Release APK
       run: ./gradlew assembleRelease
-      env:
-        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
     
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
