@@ -1,13 +1,1 @@
-// Top-level build file
-plugins {
-    id 'com.android.application' version '8.2.0' apply false
-    id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://maven.aliyun.com/repository/public' }
-    }
-}
+// Top-level build file - 空文件，所有配置在 settings.gradle 和 app/build.gradle
