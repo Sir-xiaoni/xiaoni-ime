@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -24,23 +22,24 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Create local.properties
+      run: echo "sdk.dir=/usr/local/lib/android-sdk" > local.properties
     
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+    - name: Download Gradle
+      run: |
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip -q gradle-8.5-bin.zip
+        export PATH=$PWD/gradle-8.5/bin:$PATH
     
-    - name: Upload Debug APK
+    - name: Build with Gradle
+      run: |
+        export PATH=$PWD/gradle-8.5/bin:$PATH
+        gradle wrapper --gradle-version 8.5
+        ./gradlew assembleDebug --info
+    
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: xiaoni-ime-debug
         path: app/build/outputs/apk/debug/*.apk
-    
-    - name: Build Release APK
-      run: ./gradlew assembleRelease --stacktrace
-    
-    - name: Upload Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: xiaoni-ime-release
-        path: app/build/outputs/apk/release/*.apk
+      if: always()
