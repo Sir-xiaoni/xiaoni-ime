@@ -58,9 +58,11 @@ class XiaoNiInputMethodService : InputMethodService(),
         super.onStartInput(attribute, restarting)
         Log.d(TAG, "开始输入")
         
-        // 根据输入框类型调整键盘
+        // 根据输入框类型调整键盘（确保视图已初始化）
         attribute?.let {
-            keyboardViewManager.updateKeyboardForInputType(it.inputType)
+            if (::keyboardViewManager.isInitialized) {
+                keyboardViewManager.updateKeyboardForInputType(it.inputType)
+            }
         }
     }
     

@@ -41,11 +41,10 @@ class KeyboardViewManager(
     }
     
     private fun initKeyboardView() {
-        keyboardView = container.findViewById(R.id.keyboard_view) ?: run {
-            val view = LayoutInflater.from(context).inflate(R.layout.keyboard_main, container, false)
-            container.addView(view)
-            view.findViewById(R.id.keyboard_view)
-        }
+        // 动态添加 keyboard_main 布局
+        val keyboardMainView = LayoutInflater.from(context).inflate(R.layout.keyboard_main, container, false)
+        container.addView(keyboardMainView)
+        keyboardView = keyboardMainView.findViewById(R.id.keyboard_view)
         
         keyboardView.apply {
             keyboard = qwertyKeyboard
@@ -55,11 +54,10 @@ class KeyboardViewManager(
     }
     
     private fun initVoicePanel() {
-        voicePanel = container.findViewById(R.id.voice_panel) ?: run {
-            val view = LayoutInflater.from(context).inflate(R.layout.voice_panel, container, false)
-            container.addView(view)
-            view
-        }
+        // 动态添加 voice_panel 布局
+        val voicePanelView = LayoutInflater.from(context).inflate(R.layout.voice_panel, container, false)
+        container.addView(voicePanelView)
+        voicePanel = voicePanelView.findViewById(R.id.voice_panel)
         
         voiceStatusText = voicePanel.findViewById(R.id.voice_status_text)
         voiceVolumeBar = voicePanel.findViewById(R.id.voice_volume_bar)

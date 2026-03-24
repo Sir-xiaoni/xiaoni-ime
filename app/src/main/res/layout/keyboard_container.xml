@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:background="@color/keyboard_background">
 
-    <include layout="@layout/keyboard_main" />
-    <include layout="@layout/voice_panel" />
+    <!-- 子视图将由 KeyboardViewManager 动态添加 -->
 
 </FrameLayout>
