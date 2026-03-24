@@ -1,7 +1,6 @@
 package com.xiaoni.ime.service
 
 import android.inputmethodservice.InputMethodService
-import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -12,7 +11,6 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
 import android.widget.ImageButton
 import android.widget.TextView
 import com.xiaoni.ime.R
@@ -35,7 +33,7 @@ class XiaoNiInputMethodService : InputMethodService(),
     private var stopButton: ImageButton? = null
     
     private var isListening = false
-    private var isContinuousMode = true // 默认开启连续识别
+    private var isContinuousMode = true
     private val handler = Handler(Looper.getMainLooper())
     
     override fun onCreate() {
@@ -50,18 +48,20 @@ class XiaoNiInputMethodService : InputMethodService(),
     override fun onCreateInputView(): View {
         Log.d(TAG, "创建输入视图")
         
-        // 加载语音输入面板布局
         val view = LayoutInflater.from(this).inflate(R.layout.voice_input_panel, null)
         
-        // 初始化视图
         statusText = view.findViewById(R.id.voice_status_text)
         micButton = view.findViewById(R.id.mic_button)
         stopButton = view.findViewById(R.id.stop_button)
         
         // 初始化语音识别器
-        voiceInputManager = VoiceInputManager(this, this)
+        try {
+            voiceInputManager = VoiceInputManager(this, this)
+        } catch (e: Exception) {
+            Log.e(TAG, "初始化语音识别器失败: ${e.message}")
+            statusText?.text = "初始化失败，点击重试"
+        }
         
-        // 麦克风按钮 - 开始/停止识别
         micButton?.setOnClickListener {
             if (isListening) {
                 stopVoiceInput()
@@ -70,17 +70,16 @@ class XiaoNiInputMethodService : InputMethodService(),
             }
         }
         
-        // 说完了按钮 - 停止当前识别并发送
         stopButton?.setOnClickListener {
             if (isListening) {
                 stopVoiceInputAndSend()
             }
         }
         
-        // 延迟自动开始识别，确保视图已准备好
+        // 延迟自动开始
         handler.postDelayed({
             startVoiceInput()
-        }, 500)
+        }, 800)
         
         return view
     }
@@ -101,10 +100,18 @@ class XiaoNiInputMethodService : InputMethodService(),
         voiceInputManager?.destroy()
     }
     
-    // ==================== 语音输入控制 ====================
-    
     private fun startVoiceInput() {
         if (isListening) return
+        
+        // 如果语音识别器为null，尝试重新创建
+        if (voiceInputManager == null) {
+            try {
+                voiceInputManager = VoiceInputManager(this, this)
+            } catch (e: Exception) {
+                statusText?.text = "无法启动语音识别"
+                return
+            }
+        }
         
         isListening = true
         statusText?.text = "正在聆听..."
@@ -129,7 +136,6 @@ class XiaoNiInputMethodService : InputMethodService(),
     }
     
     private fun stopVoiceInputAndSend() {
-        // 停止识别，结果会自动回调 onVoiceResult
         voiceInputManager?.stopListening()
         statusText?.text = "识别中..."
         Log.d(TAG, "说完了，等待识别结果")
@@ -144,10 +150,8 @@ class XiaoNiInputMethodService : InputMethodService(),
     override fun onVoiceResult(text: String) {
         Log.d(TAG, "识别结果: $text")
         
-        // 提交文本
         currentInputConnection?.commitText(text, 1)
         
-        // 自动发送（回车）
         currentInputConnection?.sendKeyEvent(
             KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)
         )
@@ -157,25 +161,8 @@ class XiaoNiInputMethodService : InputMethodService(),
         
         statusText?.text = "已发送，继续聆听..."
         
-        // 连续模式：继续监听
         if (isContinuousMode) {
             handler.postDelayed({
-                voiceInputManager?.startListening()
-            }, 300)
-        } else {
-            isListening = false
-            micButton?.setImageResource(R.drawable.ic_mic_off)
-        }
-    }
-    
-    override fun onVoiceError(errorMsg: String) {
-        Log.e(TAG, "语音识别错误: $errorMsg")
-        statusText?.text = "识别失败: $errorMsg"
-        
-        // 错误后继续监听
-        if (isContinuousMode && isListening) {
-            handler.postDelayed({
-                statusText?.text = "继续聆听..."
                 voiceInputManager?.startListening()
             }, 500)
         } else {
@@ -184,11 +171,16 @@ class XiaoNiInputMethodService : InputMethodService(),
         }
     }
     
-    override fun onVoiceVolumeChanged(volume: Int) {
-        // 可以在这里添加音量动画效果
+    override fun onVoiceError(errorMsg: String) {
+        Log.e(TAG, "语音识别错误: $errorMsg")
+        statusText?.text = errorMsg
+        
+        // 显示错误后，允许用户点击麦克风重试
+        isListening = false
+        micButton?.setImageResource(R.drawable.ic_mic_off)
     }
     
-    // ==================== 辅助方法 ====================
+    override fun onVoiceVolumeChanged(volume: Int) {}
     
     private fun vibrate() {
         try {

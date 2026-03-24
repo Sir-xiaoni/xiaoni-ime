@@ -74,9 +74,10 @@
 
     <!-- 底部提示 -->
     <TextView
+        android:id="@+id/hint_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AI 语音识别 · 连续输入"
+        android:text="AI 语音识别 · 点击麦克风开始"
         android:textSize="12sp"
         android:textColor="#FF5588AA"
         android:layout_marginTop="16dp"
