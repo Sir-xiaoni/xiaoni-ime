@@ -1,41 +1,40 @@
 package com.xiaoni.ime.service
 
 import android.inputmethodservice.InputMethodService
-import android.inputmethodservice.Keyboard
-import android.inputmethodservice.KeyboardView
 import android.media.AudioManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.TextView
 import com.xiaoni.ime.R
 import com.xiaoni.ime.voice.VoiceInputManager
 import com.xiaoni.ime.utils.PreferenceManager
 
 /**
- * 小逆输入法核心服务
+ * 小逆语音输入法 - 纯语音输入，无需键盘
  */
 class XiaoNiInputMethodService : InputMethodService(), 
-    KeyboardView.OnKeyboardActionListener,
     VoiceInputManager.VoiceCallback {
     
     companion object {
         const val TAG = "XiaoNiIME"
     }
     
-    private lateinit var keyboardView: KeyboardView
-    private lateinit var qwertyKeyboard: Keyboard
-    private lateinit var symbolKeyboard: Keyboard
     private lateinit var voiceInputManager: VoiceInputManager
+    private lateinit var statusText: TextView
+    private lateinit var micButton: ImageButton
+    private lateinit var stopButton: ImageButton
     
-    private var isVoiceMode = false
-    private var isContinuousMode = false
-    private var currentKeyboard: Keyboard? = null
+    private var isListening = false
+    private var isContinuousMode = true // 默认开启连续识别
     
     override fun onCreate() {
         super.onCreate()
@@ -50,48 +49,49 @@ class XiaoNiInputMethodService : InputMethodService(),
     override fun onCreateInputView(): View {
         Log.d(TAG, "创建输入视图")
         
-        // 创建根容器
-        val container = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            setBackgroundColor(resources.getColor(R.color.keyboard_background, null))
+        // 加载语音输入面板布局
+        val view = LayoutInflater.from(this).inflate(R.layout.voice_input_panel, null)
+        
+        // 初始化视图
+        statusText = view.findViewById(R.id.voice_status_text)
+        micButton = view.findViewById(R.id.mic_button)
+        stopButton = view.findViewById(R.id.stop_button)
+        
+        // 麦克风按钮 - 开始/停止识别
+        micButton.setOnClickListener {
+            if (isListening) {
+                stopVoiceInput()
+            } else {
+                startVoiceInput()
+            }
         }
         
-        // 初始化键盘
-        qwertyKeyboard = Keyboard(this, R.xml.keyboard_qwerty)
-        symbolKeyboard = Keyboard(this, R.xml.keyboard_symbols)
-        
-        // 创建 KeyboardView
-        keyboardView = KeyboardView(this, null).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                (250 * resources.displayMetrics.density).toInt()
-            )
-            keyboard = qwertyKeyboard
-            isPreviewEnabled = true
-            isEnabled = true
-            visibility = View.VISIBLE
-            setBackgroundColor(resources.getColor(R.color.keyboard_background, null))
-            setOnKeyboardActionListener(this@XiaoNiInputMethodService)
+        // 说完了按钮 - 停止当前识别并发送
+        stopButton.setOnClickListener {
+            if (isListening) {
+                stopVoiceInputAndSend()
+            }
         }
         
-        container.addView(keyboardView)
-        currentKeyboard = qwertyKeyboard
+        // 自动开始识别
+        startVoiceInput()
         
-        return container
+        return view
     }
     
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         Log.d(TAG, "开始输入")
+        // 每次聚焦输入框时自动开始识别
+        if (::voiceInputManager.isInitialized && !isListening) {
+            startVoiceInput()
+        }
     }
     
     override fun onFinishInput() {
         super.onFinishInput()
         Log.d(TAG, "结束输入")
-        voiceInputManager.stopListening()
+        stopVoiceInput()
     }
     
     override fun onDestroy() {
@@ -99,88 +99,99 @@ class XiaoNiInputMethodService : InputMethodService(),
         voiceInputManager.destroy()
     }
     
-    // ==================== 键盘事件处理 ====================
+    // ==================== 语音输入控制 ====================
     
-    override fun onPress(primaryCode: Int) {
-        playClickSound()
-        vibrate()
-    }
-    
-    override fun onRelease(primaryCode: Int) {}
-    
-    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
-        val ic = currentInputConnection ?: return
+    private fun startVoiceInput() {
+        if (isListening) return
         
-        when (primaryCode) {
-            Keyboard.KEYCODE_DELETE -> {
-                ic.deleteSurroundingText(1, 0)
-            }
-            Keyboard.KEYCODE_DONE -> {
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
-            }
-            Keyboard.KEYCODE_CANCEL -> {
-                requestHideSelf(0)
-            }
-            // 语音输入键
-            -100 -> {
-                // TODO: 实现语音输入
-            }
-            // 切换键盘
-            -101 -> {
-                currentKeyboard = if (currentKeyboard == qwertyKeyboard) symbolKeyboard else qwertyKeyboard
-                keyboardView.keyboard = currentKeyboard
-            }
-            // 空格
-            32 -> {
-                ic.commitText(" ", 1)
-            }
-            // 普通字符
-            else -> {
-                if (primaryCode >= 32) {
-                    ic.commitText(primaryCode.toChar().toString(), 1)
-                }
-            }
-        }
+        isListening = true
+        statusText.text = "正在聆听..."
+        micButton.setImageResource(R.drawable.ic_mic_on)
+        
+        voiceInputManager.startListening()
+        vibrate()
+        
+        Log.d(TAG, "开始语音输入")
     }
     
-    override fun onText(text: CharSequence?) {
-        text?.let {
-            currentInputConnection?.commitText(it, 1)
-        }
+    private fun stopVoiceInput() {
+        if (!isListening) return
+        
+        isListening = false
+        statusText.text = "点击麦克风开始说话"
+        micButton.setImageResource(R.drawable.ic_mic_off)
+        
+        voiceInputManager.stopListening()
+        
+        Log.d(TAG, "停止语音输入")
     }
     
-    override fun swipeLeft() {}
-    override fun swipeRight() {}
-    override fun swipeDown() {}
-    override fun swipeUp() {}
+    private fun stopVoiceInputAndSend() {
+        // 停止识别，结果会自动回调 onVoiceResult
+        voiceInputManager.stopListening()
+        statusText.text = "识别中..."
+        Log.d(TAG, "说完了，等待识别结果")
+    }
     
     // ==================== VoiceCallback ====================
     
-    override fun onVoiceStart() {}
-    override fun onVoiceResult(text: String) {
-        currentInputConnection?.commitText(text, 1)
+    override fun onVoiceStart() {
+        statusText.text = "正在聆听..."
     }
-    override fun onVoiceError(errorMsg: String) {}
-    override fun onVoiceVolumeChanged(volume: Int) {}
     
-    // ==================== 辅助方法 ====================
-    
-    private fun playClickSound() {
-        if (PreferenceManager.isSoundEnabled()) {
-            val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-            audioManager.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f)
+    override fun onVoiceResult(text: String) {
+        Log.d(TAG, "识别结果: $text")
+        
+        // 提交文本
+        currentInputConnection?.commitText(text, 1)
+        
+        // 自动发送（回车）
+        currentInputConnection?.sendKeyEvent(
+            KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)
+        )
+        currentInputConnection?.sendKeyEvent(
+            KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)
+        )
+        
+        statusText.text = "已发送，继续聆听..."
+        
+        // 连续模式：继续监听
+        if (isContinuousMode) {
+            voiceInputManager.startListening()
+        } else {
+            isListening = false
+            micButton.setImageResource(R.drawable.ic_mic_off)
         }
     }
+    
+    override fun onVoiceError(errorMsg: String) {
+        Log.e(TAG, "语音识别错误: $errorMsg")
+        statusText.text = "识别失败: $errorMsg"
+        
+        // 错误后继续监听
+        if (isContinuousMode && isListening) {
+            statusText.text = "继续聆听..."
+            voiceInputManager.startListening()
+        } else {
+            isListening = false
+            micButton.setImageResource(R.drawable.ic_mic_off)
+        }
+    }
+    
+    override fun onVoiceVolumeChanged(volume: Int) {
+        // 可以在这里添加音量动画效果
+    }
+    
+    // ==================== 辅助方法 ====================
     
     private fun vibrate() {
         if (PreferenceManager.isVibrationEnabled()) {
             val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
+                vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(20)
+                vibrator.vibrate(30)
             }
         }
     }
