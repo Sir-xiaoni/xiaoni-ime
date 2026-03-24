@@ -43,6 +43,17 @@ class XiaoNiInputMethodService : InputMethodService(),
         voiceInputManager = VoiceInputManager(this, this)
     }
     
+    override fun onEvaluateFullscreenMode(): Boolean {
+        // 不使用全屏模式，这样键盘会在底部弹出
+        return false
+    }
+    
+    override fun onComputeInsets(outInsets: Insets?) {
+        super.onComputeInsets(outInsets)
+        // 确保键盘显示在屏幕底部
+        outInsets?.contentTopInsets = outInsets?.visibleTopInsets
+    }
+    
     override fun onCreateInputView(): View {
         Log.d(TAG, "创建输入视图")
         keyboardContainer = LayoutInflater.from(this)

@@ -25,7 +25,7 @@ object PreferenceManager {
     // ==================== 连续模式 ====================
     
     fun isContinuousModeEnabled(): Boolean {
-        return prefs.getBoolean(KEY_CONTINUOUS_MODE, true) // 默认开启
+        return if (::prefs.isInitialized) prefs.getBoolean(KEY_CONTINUOUS_MODE, true) else true
     }
     
     fun setContinuousModeEnabled(enabled: Boolean) {
@@ -35,7 +35,7 @@ object PreferenceManager {
     // ==================== 自动发送 ====================
     
     fun isAutoSendEnabled(): Boolean {
-        return prefs.getBoolean(KEY_AUTO_SEND, true) // 默认开启
+        return if (::prefs.isInitialized) prefs.getBoolean(KEY_AUTO_SEND, true) else true
     }
     
     fun setAutoSendEnabled(enabled: Boolean) {
@@ -45,7 +45,7 @@ object PreferenceManager {
     // ==================== 按键音效 ====================
     
     fun isSoundEnabled(): Boolean {
-        return prefs.getBoolean(KEY_SOUND, true)
+        return if (::prefs.isInitialized) prefs.getBoolean(KEY_SOUND, true) else true
     }
     
     fun setSoundEnabled(enabled: Boolean) {
@@ -55,7 +55,7 @@ object PreferenceManager {
     // ==================== 按键震动 ====================
     
     fun isVibrationEnabled(): Boolean {
-        return prefs.getBoolean(KEY_VIBRATION, true)
+        return if (::prefs.isInitialized) prefs.getBoolean(KEY_VIBRATION, true) else true
     }
     
     fun setVibrationEnabled(enabled: Boolean) {
