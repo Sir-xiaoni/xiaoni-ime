@@ -9,13 +9,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.FrameLayout
 import com.xiaoni.ime.R
-import com.xiaoni.ime.ui.KeyboardViewManager
 import com.xiaoni.ime.voice.VoiceInputManager
 import com.xiaoni.ime.utils.PreferenceManager
 
@@ -30,12 +28,14 @@ class XiaoNiInputMethodService : InputMethodService(),
         const val TAG = "XiaoNiIME"
     }
     
-    private lateinit var keyboardContainer: FrameLayout
-    private lateinit var keyboardViewManager: KeyboardViewManager
+    private lateinit var keyboardView: KeyboardView
+    private lateinit var qwertyKeyboard: Keyboard
+    private lateinit var symbolKeyboard: Keyboard
     private lateinit var voiceInputManager: VoiceInputManager
     
     private var isVoiceMode = false
     private var isContinuousMode = false
+    private var currentKeyboard: Keyboard? = null
     
     override fun onCreate() {
         super.onCreate()
@@ -44,37 +44,48 @@ class XiaoNiInputMethodService : InputMethodService(),
     }
     
     override fun onEvaluateFullscreenMode(): Boolean {
-        // 不使用全屏模式，这样键盘会在底部弹出
         return false
-    }
-    
-    override fun onComputeInsets(outInsets: Insets?) {
-        super.onComputeInsets(outInsets)
-        // 确保键盘显示在屏幕底部
-        outInsets?.contentTopInsets = outInsets?.visibleTopInsets
     }
     
     override fun onCreateInputView(): View {
         Log.d(TAG, "创建输入视图")
-        keyboardContainer = LayoutInflater.from(this)
-            .inflate(R.layout.keyboard_container, null) as FrameLayout
         
-        keyboardViewManager = KeyboardViewManager(this, keyboardContainer)
-        keyboardViewManager.setOnKeyboardActionListener(this)
+        // 创建根容器
+        val container = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(resources.getColor(R.color.keyboard_background, null))
+        }
         
-        return keyboardContainer
+        // 初始化键盘
+        qwertyKeyboard = Keyboard(this, R.xml.keyboard_qwerty)
+        symbolKeyboard = Keyboard(this, R.xml.keyboard_symbols)
+        
+        // 创建 KeyboardView
+        keyboardView = KeyboardView(this, null).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                (250 * resources.displayMetrics.density).toInt()
+            )
+            keyboard = qwertyKeyboard
+            isPreviewEnabled = true
+            isEnabled = true
+            visibility = View.VISIBLE
+            setBackgroundColor(resources.getColor(R.color.keyboard_background, null))
+            setOnKeyboardActionListener(this@XiaoNiInputMethodService)
+        }
+        
+        container.addView(keyboardView)
+        currentKeyboard = qwertyKeyboard
+        
+        return container
     }
     
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         Log.d(TAG, "开始输入")
-        
-        // 根据输入框类型调整键盘（确保视图已初始化）
-        attribute?.let {
-            if (::keyboardViewManager.isInitialized) {
-                keyboardViewManager.updateKeyboardForInputType(it.inputType)
-            }
-        }
     }
     
     override fun onFinishInput() {
@@ -113,11 +124,12 @@ class XiaoNiInputMethodService : InputMethodService(),
             }
             // 语音输入键
             -100 -> {
-                toggleVoiceInput()
+                // TODO: 实现语音输入
             }
             // 切换键盘
             -101 -> {
-                keyboardViewManager.switchKeyboard()
+                currentKeyboard = if (currentKeyboard == qwertyKeyboard) symbolKeyboard else qwertyKeyboard
+                keyboardView.keyboard = currentKeyboard
             }
             // 空格
             32 -> {
@@ -143,78 +155,14 @@ class XiaoNiInputMethodService : InputMethodService(),
     override fun swipeDown() {}
     override fun swipeUp() {}
     
-    // ==================== 语音输入 ====================
-    
-    private fun toggleVoiceInput() {
-        if (isVoiceMode) {
-            stopVoiceInput()
-        } else {
-            startVoiceInput()
-        }
-    }
-    
-    private fun startVoiceInput() {
-        isVoiceMode = true
-        isContinuousMode = PreferenceManager.isContinuousModeEnabled()
-        
-        keyboardViewManager.showVoicePanel()
-        voiceInputManager.startListening()
-        
-        Log.d(TAG, "开始语音输入，连续模式: $isContinuousMode")
-    }
-    
-    private fun stopVoiceInput() {
-        isVoiceMode = false
-        voiceInputManager.stopListening()
-        keyboardViewManager.hideVoicePanel()
-        
-        Log.d(TAG, "停止语音输入")
-    }
-    
     // ==================== VoiceCallback ====================
     
-    override fun onVoiceStart() {
-        keyboardViewManager.updateVoiceStatus("正在聆听...")
-    }
-    
+    override fun onVoiceStart() {}
     override fun onVoiceResult(text: String) {
-        Log.d(TAG, "语音识别结果: $text")
-        
-        // 提交文本
         currentInputConnection?.commitText(text, 1)
-        
-        // 自动发送（回车）
-        if (PreferenceManager.isAutoSendEnabled()) {
-            currentInputConnection?.sendKeyEvent(
-                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)
-            )
-            currentInputConnection?.sendKeyEvent(
-                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)
-            )
-        }
-        
-        // 连续模式：继续监听
-        if (isContinuousMode && isVoiceMode) {
-            keyboardViewManager.updateVoiceStatus("继续聆听...")
-            voiceInputManager.startListening()
-        } else {
-            stopVoiceInput()
-        }
     }
-    
-    override fun onVoiceError(errorMsg: String) {
-        Log.e(TAG, "语音识别错误: $errorMsg")
-        keyboardViewManager.updateVoiceStatus("识别失败: $errorMsg")
-        
-        // 错误后是否继续
-        if (isContinuousMode && isVoiceMode) {
-            voiceInputManager.startListening()
-        }
-    }
-    
-    override fun onVoiceVolumeChanged(volume: Int) {
-        keyboardViewManager.updateVoiceVolume(volume)
-    }
+    override fun onVoiceError(errorMsg: String) {}
+    override fun onVoiceVolumeChanged(volume: Int) {}
     
     // ==================== 辅助方法 ====================
     

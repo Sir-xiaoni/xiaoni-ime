@@ -26,31 +26,39 @@ class KeyboardViewManager(
     private lateinit var voiceStopButton: ImageButton
     
     private var currentKeyboard: Keyboard? = null
-    private var qwertyKeyboard: Keyboard
-    private var symbolKeyboard: Keyboard
+    private lateinit var qwertyKeyboard: Keyboard
+    private lateinit var symbolKeyboard: Keyboard
     
     private var keyboardListener: KeyboardView.OnKeyboardActionListener? = null
     
     init {
-        // 初始化键盘
-        qwertyKeyboard = Keyboard(context, R.xml.keyboard_qwerty)
-        symbolKeyboard = Keyboard(context, R.xml.keyboard_symbols)
-        
-        initKeyboardView()
-        initVoicePanel()
+        try {
+            // 初始化键盘
+            qwertyKeyboard = Keyboard(context, R.xml.keyboard_qwerty)
+            symbolKeyboard = Keyboard(context, R.xml.keyboard_symbols)
+            
+            initKeyboardView()
+            initVoicePanel()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     private fun initKeyboardView() {
-        // 动态添加 keyboard_main 布局
-        val keyboardMainView = LayoutInflater.from(context).inflate(R.layout.keyboard_main, container, false)
-        container.addView(keyboardMainView)
-        keyboardView = keyboardMainView.findViewById(R.id.keyboard_view)
-        
-        keyboardView.apply {
+        // 创建 KeyboardView
+        keyboardView = KeyboardView(context, null).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                250.dpToPx()
+            )
             keyboard = qwertyKeyboard
             isPreviewEnabled = true
-            currentKeyboard = qwertyKeyboard
+            isEnabled = true
+            visibility = View.VISIBLE
         }
+        
+        container.addView(keyboardView)
+        currentKeyboard = qwertyKeyboard
     }
     
     private fun initVoicePanel() {
@@ -64,7 +72,6 @@ class KeyboardViewManager(
         voiceStopButton = voicePanel.findViewById(R.id.voice_stop_button)
         
         voiceStopButton.setOnClickListener {
-            // 停止语音输入
             hideVoicePanel()
         }
         
@@ -130,5 +137,12 @@ class KeyboardViewManager(
      */
     fun updateVoiceVolume(volume: Int) {
         voiceVolumeBar.progress = volume
+    }
+    
+    /**
+     * dp 转 px
+     */
+    private fun Int.dpToPx(): Int {
+        return (this * context.resources.displayMetrics.density).toInt()
     }
 }
